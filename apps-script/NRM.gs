@@ -1,9 +1,12 @@
 const SECRET_TOKEN = "nrm_tracker_sk_2024_aB7xK9mL3pQ8vW5zN2jD6fH4tR1cY";
 const SPREADSHEET_ID = "1k7nSIIs-CPI0aeLKIoUp_bT52y7Df3B8cCAtY5gc6GI";
 const SHEET_NAME = "Sheet1";
-const MAPPINGS_SHEET = "Mappings";
 const LOG_SHEET = "Mapping Log";
 const COLUMN_COUNT = 20;
+
+const NAME_TAB = { tab: "Name Corrections", type: "Name correction", left: "Wrong", right: "Right" };
+const TL_TAB = { tab: "Executive TL", type: "Executive to TL", left: "Executive", right: "Team Leader" };
+const MAPPING_TABS = [NAME_TAB, TL_TAB];
 
 const NAME_CORRECTIONS = [
   ["KANNDRA", "KANENDRA"],
@@ -55,18 +58,25 @@ function getOrCreateSheet(name, header) {
   return sh;
 }
 
-function readMappings() {
-  const sh = getOrCreateSheet(MAPPINGS_SHEET, ["Type", "Wrong", "Right"]);
+function readTab(cfg) {
+  const sh = getOrCreateSheet(cfg.tab, [cfg.left, cfg.right]);
   const lastRow = sh.getLastRow();
-  return lastRow < 2 ? [] : sh.getRange(2, 1, lastRow - 1, 3).getValues();
+  if (lastRow < 2) return [];
+  return sh.getRange(2, 1, lastRow - 1, 2).getValues()
+    .filter(r => r[0] && r[1])
+    .map(r => [cfg.type, String(r[0]), String(r[1])]);
 }
 
-function writeMappings(rows) {
-  const sh = getOrCreateSheet(MAPPINGS_SHEET, ["Type", "Wrong", "Right"]);
+function writeTab(cfg, rows) {
+  const sh = getOrCreateSheet(cfg.tab, [cfg.left, cfg.right]);
   sh.clear();
-  sh.getRange(1, 1, 1, 3).setValues([["Type", "Wrong", "Right"]]).setFontWeight("bold");
+  sh.getRange(1, 1, 1, 2).setValues([[cfg.left, cfg.right]]).setFontWeight("bold");
   sh.setFrozenRows(1);
-  if (rows.length) sh.getRange(2, 1, rows.length, 3).setValues(rows);
+  if (rows.length) sh.getRange(2, 1, rows.length, 2).setValues(rows.map(r => [r[1], r[2]]));
+}
+
+function readMappings() {
+  return MAPPING_TABS.reduce((all, cfg) => all.concat(readTab(cfg)), []);
 }
 
 function logMappingChanges(by, oldRows, newRows) {
@@ -94,10 +104,8 @@ function logMappingChanges(by, oldRows, newRows) {
 }
 
 function setupMappings() {
-  writeMappings(
-    NAME_CORRECTIONS.map(r => ["Name correction", r[0], r[1]])
-      .concat(EXECUTIVE_TO_TL.map(r => ["Executive to TL", r[0], r[1]]))
-  );
+  writeTab(NAME_TAB, NAME_CORRECTIONS.map(r => [NAME_TAB.type, r[0], r[1]]));
+  writeTab(TL_TAB, EXECUTIVE_TO_TL.map(r => [TL_TAB.type, r[0], r[1]]));
 }
 
 function doPost(e) {
@@ -109,11 +117,14 @@ function doPost(e) {
     const body = JSON.parse(e.postData.contents);
 
     if (body.action === "saveMappings") {
-      const newRows = (body.rows || []).filter(r => r[1] && r[2]);
-      const oldRows = readMappings();
-      logMappingChanges(body.by || "Unknown", oldRows, newRows);
-      writeMappings(newRows);
-      return jsonOut({success: true, saved: newRows.length});
+      const incoming = (body.rows || []).filter(r => r[1] && r[2]);
+      const by = body.by || "Unknown";
+      MAPPING_TABS.forEach(cfg => {
+        const newRows = incoming.filter(r => r[0] === cfg.type);
+        logMappingChanges(by, readTab(cfg), newRows);
+        writeTab(cfg, newRows);
+      });
+      return jsonOut({success: true, saved: incoming.length});
     }
 
     const deals = (body.deals || []).filter(d => Array.isArray(d) && d.some(v => v !== "" && v !== null));
