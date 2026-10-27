@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
     const response = await fetch(`${APPS_SCRIPT_URL}?token=${encodeURIComponent(TOKEN)}`, {
       method: 'POST',
-      payload: JSON.stringify(body)
+      body: JSON.stringify(body)
     });
 
     const data = await response.json();
