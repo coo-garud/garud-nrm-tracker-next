@@ -231,6 +231,7 @@ footer{color:var(--faint);font-size:12px;padding-block:6px 30px}
       <button class="btn primary" id="addBtn">+ New booking</button>
       <button class="btn" id="upBtn">Upload NRM file</button>
       <button class="btn" id="setBtn" aria-expanded="false">Name &amp; TL mapping</button>
+      <a href="/sign-out" style="text-decoration:none"><button class="btn" style="cursor:pointer">Sign out</button></a>
     </div>
   </div>
   <div class="wrap" id="errBox" hidden></div>
