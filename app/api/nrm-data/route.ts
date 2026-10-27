@@ -9,7 +9,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwIwj325AfuEmexBGAA_jKF3PEFxeYMWaT0lvGTQqntCGoJPSjArGNF7fwuxyhHznqHqQ/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzm_tj_J-4HMKE7MxRP_4FLcshAMsQkRUtlSU9jrl0Eb-lhXdpfRCvg6eQbmX-k-teZxw/exec';
     const TOKEN = 'nrm_tracker_sk_2024_aB7xK9mL3pQ8vW5zN2jD6fH4tR1cY';
 
     const response = await fetch(`${APPS_SCRIPT_URL}?token=${encodeURIComponent(TOKEN)}`);
