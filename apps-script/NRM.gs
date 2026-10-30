@@ -108,6 +108,13 @@ function setupMappings() {
   writeTab(TL_TAB, EXECUTIVE_TO_TL.map(r => [TL_TAB.type, r[0], r[1]]));
 }
 
+function dealKeys(row) {
+  const keys = [];
+  if (row[4] !== "" && row[4] != null) keys.push("chassis:" + String(row[4]).trim().toUpperCase());
+  if (row[1] !== "" && row[1] != null) keys.push("invoice:" + String(row[1]).trim().toUpperCase());
+  return keys;
+}
+
 function doPost(e) {
   if (e.parameter.token !== SECRET_TOKEN) {
     return jsonOut({error: "Unauthorized"});
@@ -133,9 +140,21 @@ function doPost(e) {
     }
 
     const sheet = getDataSheet();
-    deals.forEach(d => sheet.appendRow(d));
+    const seen = new Set();
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      sheet.getRange(2, 1, lastRow - 1, COLUMN_COUNT).getValues().forEach(r => dealKeys(r).forEach(k => seen.add(k)));
+    }
+    const fresh = [];
+    deals.forEach(d => {
+      const keys = dealKeys(d);
+      if (keys.some(k => seen.has(k))) return;
+      keys.forEach(k => seen.add(k));
+      fresh.push(d);
+    });
+    if (fresh.length) sheet.getRange(sheet.getLastRow() + 1, 1, fresh.length, COLUMN_COUNT).setValues(fresh);
 
-    return jsonOut({success: true, saved: deals.length});
+    return jsonOut({success: true, saved: fresh.length, skipped: deals.length - fresh.length});
   } catch (error) {
     return jsonOut({error: error.toString()});
   }
@@ -154,7 +173,8 @@ function doGet(e) {
     const sheet = getDataSheet();
     const lastRow = sheet.getLastRow();
     const rows = lastRow < 2 ? [] : sheet.getRange(2, 1, lastRow - 1, COLUMN_COUNT).getValues();
-    return jsonOut({rows: rows});
+    const tz = Session.getScriptTimeZone();
+    return jsonOut({rows: rows.map(r => r.map(v => v instanceof Date ? Utilities.formatDate(v, tz, "yyyy-MM-dd") : v))});
   } catch (error) {
     return jsonOut({error: error.toString()});
   }
