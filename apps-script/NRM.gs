@@ -115,6 +115,24 @@ function dealKeys(row) {
   return keys;
 }
 
+function updateDeal(match, deal) {
+  if (!Array.isArray(deal) || deal.length !== COLUMN_COUNT) {
+    throw new Error("A deal must have " + COLUMN_COUNT + " values");
+  }
+  const sh = getDataSheet();
+  const last = sh.getLastRow();
+  if (last < 2) return null;
+  const data = sh.getRange(2, 1, last - 1, COLUMN_COUNT).getValues();
+  const up = v => String(v == null ? "" : v).trim().toUpperCase();
+  const find = (value, col) => value ? data.findIndex(r => up(r[col]) === up(value)) : -1;
+  let i = find(match.chassis, 4);
+  if (i < 0) i = find(match.invNo, 1);
+  if (i < 0) i = find(match.bookingNo, 0);
+  if (i < 0) return null;
+  sh.getRange(i + 2, 1, 1, COLUMN_COUNT).setValues([deal]);
+  return i + 2;
+}
+
 function doPost(e) {
   if (e.parameter.token !== SECRET_TOKEN) {
     return jsonOut({error: "Unauthorized"});
@@ -132,6 +150,12 @@ function doPost(e) {
         writeTab(cfg, newRows);
       });
       return jsonOut({success: true, saved: incoming.length});
+    }
+
+    if (body.action === "updateDeal") {
+      const row = updateDeal(body.match || {}, body.deal);
+      if (!row) return jsonOut({error: "That deal is no longer in the sheet. Refresh and try again."});
+      return jsonOut({success: true, row: row});
     }
 
     const deals = (body.deals || []).filter(d => Array.isArray(d) && d.some(v => v !== "" && v !== null));
