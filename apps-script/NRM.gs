@@ -115,6 +115,26 @@ function dealKeys(row) {
   return keys;
 }
 
+function removeDuplicateDeals() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sh = ss.getSheetByName(SHEET_NAME);
+  const last = sh.getLastRow();
+  if (last < 3) return {removed: 0};
+  const data = sh.getRange(2, 1, last - 1, COLUMN_COUNT).getValues();
+  const seen = new Set();
+  const drop = [];
+  data.forEach((r, idx) => {
+    const k = JSON.stringify(r);
+    if (seen.has(k)) drop.push(idx + 2);
+    else seen.add(k);
+  });
+  if (!drop.length) return {removed: 0};
+  const backupName = "Backup " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HHmm");
+  sh.copyTo(ss).setName(backupName);
+  drop.sort((a, b) => b - a).forEach(row => sh.deleteRow(row));
+  return {removed: drop.length, backup: backupName};
+}
+
 function updateDeal(match, deal) {
   if (!Array.isArray(deal) || deal.length !== COLUMN_COUNT) {
     throw new Error("A deal must have " + COLUMN_COUNT + " values");
@@ -150,6 +170,10 @@ function doPost(e) {
         writeTab(cfg, newRows);
       });
       return jsonOut({success: true, saved: incoming.length});
+    }
+
+    if (body.action === "removeDuplicates") {
+      return jsonOut(Object.assign({success: true}, removeDuplicateDeals()));
     }
 
     if (body.action === "updateDeal") {
