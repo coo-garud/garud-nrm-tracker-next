@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: data.error || 'Failed to save data' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, message: 'Data saved' });
+    return NextResponse.json({ success: true, saved: data.saved ?? null, skipped: data.skipped ?? null });
   } catch (error) {
     console.error('API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
