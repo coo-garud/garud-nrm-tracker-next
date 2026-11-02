@@ -3,9 +3,17 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
+    const { userId, sessionStatus } = await auth();
 
     if (!userId) {
+      const cookieNames = (req.headers.get('cookie') ?? '').split(';').map(c => c.trim().split('=')[0]).filter(Boolean);
+      console.warn('save-nrm 401', {
+        sessionStatus,
+        cookieNames,
+        host: req.headers.get('host'),
+        origin: req.headers.get('origin'),
+        userAgent: req.headers.get('user-agent'),
+      });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
