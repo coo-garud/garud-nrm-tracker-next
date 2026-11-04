@@ -200,7 +200,14 @@ function doPost(e) {
       keys.forEach(k => seen.add(k));
       fresh.push(d);
     });
-    if (fresh.length) sheet.getRange(sheet.getLastRow() + 1, 1, fresh.length, COLUMN_COUNT).setValues(fresh);
+    if (fresh.length) {
+      const addedAt = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+      if (sheet.getRange(1, COLUMN_COUNT + 1).getValue() !== "Added At") {
+        sheet.getRange(1, COLUMN_COUNT + 1).setValue("Added At").setFontWeight("bold");
+      }
+      sheet.getRange(sheet.getLastRow() + 1, 1, fresh.length, COLUMN_COUNT + 1)
+        .setValues(fresh.map(d => d.concat([addedAt])));
+    }
 
     return jsonOut({success: true, saved: fresh.length, skipped: deals.length - fresh.length});
   } catch (error) {
